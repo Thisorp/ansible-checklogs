@@ -1,0 +1,161 @@
+---
+- name: Audit system users + basic checks
+  hosts: all_linux
+  gather_facts: false
+  become: true
+
+  tasks:
+
+    # =========================
+    # 1. CHECK USER SYSTEM
+    # =========================
+    - name: Get all users from /etc/passwd
+      shell: "getent passwd"
+      register: passwd_all
+      changed_when: false
+      failed_when: false
+
+    - name: Parse users
+      set_fact:
+        users_parsed: "{{ passwd_all.stdout_lines | default([]) }}"
+
+    - name: Analyze users
+      set_fact:
+        user_report: |
+          {% for u in users_parsed %}
+          {% set f = u.split(':') %}
+          {% set name = f[0] %}
+          {% set uid = f[2]|int %}
+          {% set home = f[5] %}
+          {% set shell = f[6] %}
+
+          USER={{ name }}
+          UID={{ uid }}
+          HOME={{ home }}
+          SHELL={{ shell }}
+          IS_ROOT={{ 'YES' if name == 'root' else 'NO' }}
+          IS_SYSTEM={{ 'YES' if uid < 1000 else 'NO' }}
+          NO_LOGIN={{ 'YES' if 'nologin' in shell or 'false' in shell else 'NO' }}
+          HOME_VALID={{ 'YES' if home.startswith('/') else 'NO' }}
+          ----------------------------------------
+          {% endfor %}
+
+    # =========================
+    # 2. CHECK CHRONY
+    # =========================
+    - name: Check chrony exists
+      shell: |
+        if systemctl list-unit-files --type=service | grep -q '^chronyd\.service'; then
+          echo "chronyd"
+          systemctl is-active chronyd || true
+        elif systemctl list-unit-files --type=service | grep -q '^chrony\.service'; then
+          echo "chrony"
+          systemctl is-active chrony || true
+        else
+          echo "NOT_FOUND"
+        fi
+      register: chrony_check
+      changed_when: false
+      failed_when: false
+
+    # =========================
+    # 3. CHECK JAVA
+    # =========================
+    - name: Check java
+      shell: |
+        if pgrep -fa java >/dev/null 2>&1; then
+          pgrep -fa java | while read -r line; do
+            pid=$(echo "$line" | awk '{print $1}')
+            cmd=$(echo "$line" | cut -d' ' -f2-)
+            juser=$(ps -o user= -p "$pid" 2>/dev/null | xargs)
+            xmx=$(echo "$cmd" | grep -oE -- '-Xmx[^ ]+' | head -n1)
+            echo "PID=$pid USER=${juser:-unknown} XMX=${xmx:-N/A} CMD=$cmd"
+          done
+        else
+          echo "NO_JAVA"
+        fi
+      register: java_check
+      changed_when: false
+      failed_when: false
+
+    # =========================
+    # 4. CHECK UFW
+    # =========================
+    - name: Check ufw
+      shell: |
+        if command -v ufw >/dev/null 2>&1; then
+          ufw status verbose || true
+        else
+          echo "UFW_NOT_FOUND"
+        fi
+      register: ufw_check
+      changed_when: false
+      failed_when: false
+
+    # =========================
+    # 5. CHECK KESL
+    # =========================
+    - name: Check kesl
+      shell: |
+        systemctl status kesl --no-pager -l 2>/dev/null || ps -ef | grep -i '[k]esl' || echo "KESL_NOT_FOUND"
+      register: kesl_check
+      changed_when: false
+      failed_when: false
+
+    # =========================
+    # 6. CHECK /data
+    # =========================
+    - name: Check data mount
+      shell: |
+        echo "--- FSTAB ---"
+        grep /data /etc/fstab || echo "NO_FSTAB_DATA"
+        echo "--- MOUNT ---"
+        mount | grep /data || echo "NO_MOUNT_DATA"
+      register: data_check
+      changed_when: false
+      failed_when: false
+
+    # =========================
+    # 7. BUILD REPORT
+    # =========================
+    - name: Build report
+      set_fact:
+        report_text: |
+          HOST: {{ inventory_hostname }}
+
+          === USER AUDIT ===
+          {{ user_report | default('NO_USER_DATA') }}
+
+          === CHRONY ===
+          {{ chrony_check.stdout | default('NO_CHRONY_DATA') }}
+
+          === JAVA ===
+          {{ java_check.stdout | default('NO_JAVA_DATA') }}
+
+          === UFW ===
+          {{ ufw_check.stdout | default('NO_UFW_DATA') }}
+
+          === KESL ===
+          {{ kesl_check.stdout | default('NO_KESL_DATA') }}
+
+          === DATA ===
+          {{ data_check.stdout | default('NO_DATA_CHECK') }}
+
+    # =========================
+    # 8. SAVE LOG LOCAL
+    # =========================
+    - name: Ensure log dir
+      delegate_to: localhost
+      become: false
+      file:
+        path: "./logs"
+        state: directory
+        mode: "0755"
+
+    - name: Save log per host
+      delegate_to: localhost
+      become: false
+      copy:
+        dest: "./logs/{{ inventory_hostname }}.log"
+        content: "{{ report_text }}"
+        mode: "0644"

@@ -1,0 +1,7 @@
+ansible_user: setup
+ansible_connection: ssh
+ansible_become: true
+ansible_become_method: sudo
+
+ansible_password: "123456"
+ansible_become_password: "123456"
