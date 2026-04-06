@@ -1,7 +1,14 @@
-ansible_user: setup
-ansible_connection: ssh
-ansible_become: true
-ansible_become_method: sudo
+report_dir: "./reports"
 
-ansible_password: "123456"
-ansible_become_password: "123456"
+service_checks:
+  canal:
+    service_name: "canal"
+    service_user: "canal"
+
+  datax:
+    service_name: "datax"
+    service_user: "datax"
+
+  dophin-scheduler:
+    service_name: "dophin-scheduler"
+    service_user: "dolphin"

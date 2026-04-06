@@ -1,0 +1,66 @@
+HOST: node-1
+MATCHED_GROUP: dophin-scheduler
+
+=== TARGET SERVICE ===
+STATUS=FAIL
+MESSAGE=SERVICE_NOT_FOUND
+SERVICE=dophin-scheduler
+
+=== LAST 5 NOLOGIN USERS ===
+USER=systemd-network
+UID=998
+HOME=/
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=systemd-timesync
+UID=997
+HOME=/
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=messagebus
+UID=100
+HOME=/nonexistent
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=systemd-resolve
+UID=992
+HOME=/
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=sshd
+UID=101
+HOME=/run/sshd
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+
+=== CHRONY ===
+STATUS=FAIL
+MESSAGE=CHRONY_NOT_FOUND
+
+=== JAVA ===
+NO_JAVA
+
+=== UFW ===
+STATUS=FAIL
+MESSAGE=UFW_NOT_FOUND
+
+=== KESL ===
+STATUS=FAIL
+MESSAGE=KESL_NOT_FOUND
+
+=== DATA ===
+STATUS=FAIL
+--- FSTAB ---
+NO_FSTAB_DATA
+--- MOUNT ---
+NO_MOUNT_DATA

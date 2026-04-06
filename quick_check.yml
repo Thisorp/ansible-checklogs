@@ -1,161 +1,308 @@
 ---
-- name: Audit system users + basic checks
-  hosts: all_linux
+- name: Audit system users + service checks
+  hosts: all
   gather_facts: false
   become: true
 
-  tasks:
+  pre_tasks:
+    - name: Ensure reports directory exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ report_dir }}/{{ matched_group }}"
+        state: directory
+        mode: "0755"
+      run_once: true
 
-    # =========================
-    # 1. CHECK USER SYSTEM
-    # =========================
-    - name: Get all users from /etc/passwd
-      shell: "getent passwd"
-      register: passwd_all
-      changed_when: false
-      failed_when: false
-
-    - name: Parse users
-      set_fact:
-        users_parsed: "{{ passwd_all.stdout_lines | default([]) }}"
-
-    - name: Analyze users
-      set_fact:
-        user_report: |
-          {% for u in users_parsed %}
-          {% set f = u.split(':') %}
-          {% set name = f[0] %}
-          {% set uid = f[2]|int %}
-          {% set home = f[5] %}
-          {% set shell = f[6] %}
-
-          USER={{ name }}
-          UID={{ uid }}
-          HOME={{ home }}
-          SHELL={{ shell }}
-          IS_ROOT={{ 'YES' if name == 'root' else 'NO' }}
-          IS_SYSTEM={{ 'YES' if uid < 1000 else 'NO' }}
-          NO_LOGIN={{ 'YES' if 'nologin' in shell or 'false' in shell else 'NO' }}
-          HOME_VALID={{ 'YES' if home.startswith('/') else 'NO' }}
-          ----------------------------------------
-          {% endfor %}
-
-    # =========================
-    # 2. CHECK CHRONY
-    # =========================
-    - name: Check chrony exists
-      shell: |
-        if systemctl list-unit-files --type=service | grep -q '^chronyd\.service'; then
-          echo "chronyd"
-          systemctl is-active chronyd || true
-        elif systemctl list-unit-files --type=service | grep -q '^chrony\.service'; then
-          echo "chrony"
-          systemctl is-active chrony || true
-        else
-          echo "NOT_FOUND"
-        fi
-      register: chrony_check
-      changed_when: false
-      failed_when: false
-
-    # =========================
-    # 3. CHECK JAVA
-    # =========================
-    - name: Check java
-      shell: |
-        if pgrep -fa java >/dev/null 2>&1; then
-          pgrep -fa java | while read -r line; do
-            pid=$(echo "$line" | awk '{print $1}')
-            cmd=$(echo "$line" | cut -d' ' -f2-)
-            juser=$(ps -o user= -p "$pid" 2>/dev/null | xargs)
-            xmx=$(echo "$cmd" | grep -oE -- '-Xmx[^ ]+' | head -n1)
-            echo "PID=$pid USER=${juser:-unknown} XMX=${xmx:-N/A} CMD=$cmd"
-          done
-        else
-          echo "NO_JAVA"
-        fi
-      register: java_check
-      changed_when: false
-      failed_when: false
-
-    # =========================
-    # 4. CHECK UFW
-    # =========================
-    - name: Check ufw
-      shell: |
-        if command -v ufw >/dev/null 2>&1; then
-          ufw status verbose || true
-        else
-          echo "UFW_NOT_FOUND"
-        fi
-      register: ufw_check
-      changed_when: false
-      failed_when: false
-
-    # =========================
-    # 5. CHECK KESL
-    # =========================
-    - name: Check kesl
-      shell: |
-        systemctl status kesl --no-pager -l 2>/dev/null || ps -ef | grep -i '[k]esl' || echo "KESL_NOT_FOUND"
-      register: kesl_check
-      changed_when: false
-      failed_when: false
-
-    # =========================
-    # 6. CHECK /data
-    # =========================
-    - name: Check data mount
-      shell: |
-        echo "--- FSTAB ---"
-        grep /data /etc/fstab || echo "NO_FSTAB_DATA"
-        echo "--- MOUNT ---"
-        mount | grep /data || echo "NO_MOUNT_DATA"
-      register: data_check
-      changed_when: false
-      failed_when: false
-
-    # =========================
-    # 7. BUILD REPORT
-    # =========================
-    - name: Build report
-      set_fact:
-        report_text: |
-          HOST: {{ inventory_hostname }}
-
-          === USER AUDIT ===
-          {{ user_report | default('NO_USER_DATA') }}
-
-          === CHRONY ===
-          {{ chrony_check.stdout | default('NO_CHRONY_DATA') }}
-
-          === JAVA ===
-          {{ java_check.stdout | default('NO_JAVA_DATA') }}
-
-          === UFW ===
-          {{ ufw_check.stdout | default('NO_UFW_DATA') }}
-
-          === KESL ===
-          {{ kesl_check.stdout | default('NO_KESL_DATA') }}
-
-          === DATA ===
-          {{ data_check.stdout | default('NO_DATA_CHECK') }}
-
-    # =========================
-    # 8. SAVE LOG LOCAL
-    # =========================
-    - name: Ensure log dir
+    - name: Ensure logs directory exists
       delegate_to: localhost
       become: false
       file:
         path: "./logs"
         state: directory
         mode: "0755"
+      run_once: true
 
-    - name: Save log per host
+    - name: Resolve service config from group
+      set_fact:
+        matched_group: "{{ (group_names | intersect(service_checks.keys() | list) | first) | default('') }}"
+      changed_when: false
+
+    - name: Fail if no service mapping found
+      fail:
+        msg: "No service mapping found for host {{ inventory_hostname }}. group_names={{ group_names }}"
+      when: matched_group == ""
+
+    - name: Set target service variables
+      set_fact:
+        check_service_name: "{{ service_checks[matched_group].service_name }}"
+        check_service_user: "{{ service_checks[matched_group].service_user }}"
+      changed_when: false
+
+  tasks:
+    - name: Get last 5 nologin users
+      shell: |
+        getent passwd | awk -F: '($7 ~ /nologin|false/){print $1 ":" $3 ":" $6 ":" $7}' | tail -n 5 | \
+        while IFS=: read -r name uid home shell; do
+          echo "USER=$name"
+          echo "UID=$uid"
+          echo "HOME=$home"
+          echo "SHELL=$shell"
+          if [ "$name" = "root" ]; then
+            echo "IS_ROOT=YES"
+          else
+            echo "IS_ROOT=NO"
+          fi
+          if [ "$uid" -lt 1000 ]; then
+            echo "IS_SYSTEM=YES"
+          else
+            echo "IS_SYSTEM=NO"
+          fi
+          echo "----------------------------------------"
+        done
+      register: nologin_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check target service runtime info
+      shell: |
+        svc="{{ check_service_name }}"
+
+        if systemctl list-unit-files --type=service | awk '{print $1}' | grep -qx "${svc}.service"; then
+          service_unit="${svc}.service"
+        elif systemctl list-unit-files --type=service | awk '{print $1}' | grep -qx "${svc}"; then
+          service_unit="${svc}"
+        else
+          echo "STATUS=FAIL"
+          echo "MESSAGE=SERVICE_NOT_FOUND"
+          echo "SERVICE=${svc}"
+          exit 0
+        fi
+
+        state=$(systemctl is-active "${service_unit}" 2>/dev/null || true)
+        main_pid=$(systemctl show -p MainPID --value "${service_unit}" 2>/dev/null || echo 0)
+        description=$(systemctl show -p Description --value "${service_unit}" 2>/dev/null || true)
+        exec_start=$(systemctl show -p ExecStart --value "${service_unit}" 2>/dev/null || true)
+
+        echo "SERVICE=${service_unit}"
+        echo "DESCRIPTION=${description:-N/A}"
+        echo "STATE=${state:-unknown}"
+        echo "MAIN_PID=${main_pid:-0}"
+        echo "EXEC_START=${exec_start:-N/A}"
+
+        if [ "$state" != "active" ]; then
+          echo "STATUS=FAIL"
+          echo "MESSAGE=SERVICE_NOT_ACTIVE"
+          exit 0
+        fi
+
+        if [ -z "$main_pid" ] || [ "$main_pid" = "0" ]; then
+          echo "STATUS=FAIL"
+          echo "MESSAGE=MAIN_PID_NOT_FOUND"
+          exit 0
+        fi
+
+        run_user=$(ps -o user= -p "$main_pid" 2>/dev/null | xargs || true)
+        run_comm=$(ps -o comm= -p "$main_pid" 2>/dev/null | xargs || true)
+        run_cmd=$(ps -o args= -p "$main_pid" 2>/dev/null || true)
+
+        echo "RUN_USER=${run_user:-unknown}"
+        echo "RUN_COMM=${run_comm:-unknown}"
+        echo "RUN_CMD=${run_cmd:-N/A}"
+
+        if [ "${run_user}" = "{{ check_service_user }}" ]; then
+          echo "USER_STATUS=OK"
+        else
+          echo "USER_STATUS=FAIL"
+          echo "EXPECTED_USER={{ check_service_user }}"
+        fi
+
+        if [ "${run_comm}" = "java" ]; then
+          xms=$(printf '%s\n' "$run_cmd" | grep -oE -- '-Xms[^ ]+' | head -n1 || true)
+          xmx=$(printf '%s\n' "$run_cmd" | grep -oE -- '-Xmx[^ ]+' | head -n1 || true)
+          echo "JAVA_XMS=${xms:-N/A}"
+          echo "JAVA_XMX=${xmx:-N/A}"
+        fi
+
+        if [ "${run_user}" = "{{ check_service_user }}" ]; then
+          echo "STATUS=OK"
+        else
+          echo "STATUS=FAIL"
+          echo "MESSAGE=SERVICE_RUNNING_WITH_WRONG_USER"
+        fi
+      register: target_service_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set target service failed flag
+      set_fact:
+        target_service_failed: "{{ 'STATUS=FAIL' in (target_service_check.stdout | default('')) }}"
+      changed_when: false
+
+    - name: Check chrony
+      shell: |
+        if systemctl list-unit-files --type=service | grep -q '^chronyd\.service'; then
+          svc="chronyd"
+        elif systemctl list-unit-files --type=service | grep -q '^chrony\.service'; then
+          svc="chrony"
+        else
+          echo "STATUS=FAIL"
+          echo "MESSAGE=CHRONY_NOT_FOUND"
+          exit 0
+        fi
+
+        state=$(systemctl is-active "$svc" 2>/dev/null || true)
+        echo "SERVICE=$svc"
+        echo "STATE=$state"
+
+        if [ "$state" != "active" ]; then
+          echo "STATUS=FAIL"
+          echo "MESSAGE=CHRONY_NOT_ACTIVE"
+          exit 0
+        fi
+
+        echo "STATUS=OK"
+
+        if command -v chronyc >/dev/null 2>&1; then
+          selected=$(chronyc sources 2>/dev/null | awk '/^\^\*/ {print $2}')
+          echo "SELECTED_NTP=${selected:-N/A}"
+          echo "--- TRACKING ---"
+          chronyc tracking 2>/dev/null || true
+        else
+          echo "SELECTED_NTP=CHRONYC_NOT_FOUND"
+        fi
+      register: chrony_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set chrony failed flag
+      set_fact:
+        chrony_failed: "{{ 'STATUS=FAIL' in (chrony_check.stdout | default('')) }}"
+      changed_when: false
+
+    - name: Check java processes
+      shell: |
+        pgrep -a -f '(^|/)(java)( |$)' || echo "NO_JAVA"
+      register: java_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check ufw
+      shell: |
+        if command -v ufw >/dev/null 2>&1; then
+          echo "STATUS=OK"
+          ufw status verbose 2>/dev/null || true
+        else
+          echo "STATUS=FAIL"
+          echo "MESSAGE=UFW_NOT_FOUND"
+        fi
+      register: ufw_check
+      changed_when: false
+      failed_when: false
+
+    - name: Check kesl
+      shell: |
+        if systemctl list-unit-files --type=service | grep -q '^kesl\.service'; then
+          state=$(systemctl is-active kesl 2>/dev/null || true)
+          echo "SERVICE=kesl"
+          echo "STATE=$state"
+          if [ "$state" = "active" ]; then
+            echo "STATUS=OK"
+          else
+            echo "STATUS=FAIL"
+            echo "MESSAGE=KESL_NOT_ACTIVE"
+          fi
+        elif pgrep -a -f '(^|/)(kesl)( |$)' >/dev/null 2>&1; then
+          echo "SERVICE=kesl_process"
+          echo "STATUS=OK"
+          pgrep -a -f '(^|/)(kesl)( |$)'
+        else
+          echo "STATUS=FAIL"
+          echo "MESSAGE=KESL_NOT_FOUND"
+        fi
+      register: kesl_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set kesl failed flag
+      set_fact:
+        kesl_failed: "{{ 'STATUS=FAIL' in (kesl_check.stdout | default('')) }}"
+      changed_when: false
+
+    - name: Check /data
+      shell: |
+        fstab_line=$(grep -w '/data' /etc/fstab 2>/dev/null || true)
+        mount_line=$(mount | grep -w '/data' || true)
+
+        if [ -n "$fstab_line" ] && [ -n "$mount_line" ]; then
+          echo "STATUS=OK"
+        else
+          echo "STATUS=FAIL"
+        fi
+
+        echo "--- FSTAB ---"
+        echo "${fstab_line:-NO_FSTAB_DATA}"
+        echo "--- MOUNT ---"
+        echo "${mount_line:-NO_MOUNT_DATA}"
+      register: data_check
+      changed_when: false
+      failed_when: false
+
+    - name: Set data failed flag
+      set_fact:
+        data_failed: "{{ 'STATUS=FAIL' in (data_check.stdout | default('')) }}"
+      changed_when: false
+
+    - name: Build final report
+      set_fact:
+        report_text: |
+          HOST: {{ inventory_hostname }}
+          MATCHED_GROUP: {{ matched_group }}
+
+          === TARGET SERVICE ===
+          {{ target_service_check.stdout | default('NO_TARGET_SERVICE_DATA') | trim }}
+
+          === LAST 5 NOLOGIN USERS ===
+          {{ nologin_check.stdout | default('NO_NOLOGIN_USERS') | trim }}
+
+          === CHRONY ===
+          {{ chrony_check.stdout | default('NO_CHRONY_DATA') | trim }}
+
+          === JAVA ===
+          {{ java_check.stdout | default('NO_JAVA_DATA') | trim }}
+
+          === UFW ===
+          {{ ufw_check.stdout | default('NO_UFW_DATA') | trim }}
+
+          === KESL ===
+          {{ kesl_check.stdout | default('NO_KESL_DATA') | trim }}
+
+          === DATA ===
+          {{ data_check.stdout | default('NO_DATA_CHECK') | trim }}
+      changed_when: false
+
+    - name: Save report
       delegate_to: localhost
       become: false
       copy:
-        dest: "./logs/{{ inventory_hostname }}.log"
+        dest: "{{ report_dir }}/{{ matched_group }}/{{ inventory_hostname }}.log"
         content: "{{ report_text }}"
         mode: "0644"
+
+    - name: Show report path
+      debug:
+        msg: "Saved: {{ report_dir }}/{{ matched_group }}/{{ inventory_hostname }}.log"
+
+    - name: Fail at end if mandatory checks are not compliant
+      fail:
+        msg: |
+          Compliance check failed on {{ inventory_hostname }}.
+          target_service_failed={{ target_service_failed | default(false) }}
+          chrony_failed={{ chrony_failed | default(false) }}
+          kesl_failed={{ kesl_failed | default(false) }}
+          data_failed={{ data_failed | default(false) }}
+      when: >
+        target_service_failed | default(false) or
+        chrony_failed | default(false) or
+        kesl_failed | default(false) or
+        data_failed | default(false)

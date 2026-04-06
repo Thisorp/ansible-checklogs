@@ -1,0 +1,91 @@
+HOST: node-2
+MATCHED_GROUP: canal
+
+=== TARGET SERVICE ===
+STATUS=FAIL
+MESSAGE=SERVICE_NOT_FOUND
+SERVICE=canal
+
+=== LAST 5 NOLOGIN USERS ===
+USER=systemd-timesync
+UID=997
+HOME=/
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=messagebus
+UID=100
+HOME=/nonexistent
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=systemd-resolve
+UID=992
+HOME=/
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=sshd
+UID=101
+HOME=/run/sshd
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+USER=_chrony
+UID=102
+HOME=/var/lib/chrony
+SHELL=/usr/sbin/nologin
+IS_ROOT=NO
+IS_SYSTEM=YES
+----------------------------------------
+
+=== CHRONY ===
+SERVICE=chronyd
+STATE=active
+STATUS=OK
+SELECTED_NTP=N/A
+--- TRACKING ---
+Reference ID    : 00000000 ()
+Stratum         : 0
+Ref time (UTC)  : Thu Jan 01 00:00:00 1970
+System time     : 0.000000000 seconds fast of NTP time
+Last offset     : +0.000000000 seconds
+RMS offset      : 0.000000000 seconds
+Frequency       : 8.768 ppm fast
+Residual freq   : +0.000 ppm
+Skew            : 0.000 ppm
+Root delay      : 1.000000000 seconds
+Root dispersion : 1.000000000 seconds
+Update interval : 0.0 seconds
+Leap status     : Not synchronised
+
+=== JAVA ===
+NO_JAVA
+
+=== UFW ===
+STATUS=OK
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), disabled (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22                         ALLOW IN    Anywhere                  
+22 (v6)                    ALLOW IN    Anywhere (v6)
+
+=== KESL ===
+SERVICE=kesl
+STATE=active
+STATUS=OK
+
+=== DATA ===
+STATUS=FAIL
+--- FSTAB ---
+NO_FSTAB_DATA
+--- MOUNT ---
+NO_MOUNT_DATA
