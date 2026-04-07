@@ -1,0 +1,160 @@
+2026-04-07 03:29:53,247 p=2279 u=setup n=ansible | [WARNING]: Invalid characters were found in group names but not replaced, use -vvvv to see details
+
+2026-04-07 03:29:53,346 p=2279 u=setup n=ansible | PLAY [Audit system users + service checks] ********************************************************************************************************************************************************
+2026-04-07 03:29:53,349 p=2279 u=setup n=ansible | TASK [Ensure reports directory exists] ************************************************************************************************************************************************************
+2026-04-07 03:29:53,357 p=2279 u=setup n=ansible | fatal: [node-2 -> localhost]: FAILED! => 
+  msg: |-
+    The task includes an option with an undefined variable. The error was: 'matched_group' is undefined. 'matched_group' is undefined
+  
+    The error appears to be in '/home/setup/ansible-checklogs/quick_check.yml': line 8, column 7, but may
+    be elsewhere in the file depending on the exact syntax problem.
+  
+    The offending line appears to be:
+  
+      pre_tasks:
+        - name: Ensure reports directory exists
+          ^ here
+2026-04-07 03:29:53,357 p=2279 u=setup n=ansible | NO MORE HOSTS LEFT ********************************************************************************************************************************************************************************
+2026-04-07 03:29:53,358 p=2279 u=setup n=ansible | PLAY RECAP ****************************************************************************************************************************************************************************************
+2026-04-07 03:29:53,358 p=2279 u=setup n=ansible | node-2                     : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-04-07 03:34:07,887 p=3107 u=setup n=ansible | [WARNING]: Invalid characters were found in group names but not replaced, use -vvvv to see details
+
+2026-04-07 03:34:07,986 p=3107 u=setup n=ansible | PLAY [Audit system users + service checks] ********************************************************************************************************************************************************
+2026-04-07 03:34:07,989 p=3107 u=setup n=ansible | TASK [Ensure reports root directory exists] *******************************************************************************************************************************************************
+2026-04-07 03:34:08,157 p=3107 u=setup n=ansible | ok: [node-2 -> localhost]
+2026-04-07 03:34:08,159 p=3107 u=setup n=ansible | TASK [Create report directories for all service groups] *******************************************************************************************************************************************
+2026-04-07 03:34:08,276 p=3107 u=setup n=ansible | changed: [node-2 -> localhost] => (item=canal)
+2026-04-07 03:34:08,365 p=3107 u=setup n=ansible | changed: [node-2 -> localhost] => (item=datax)
+2026-04-07 03:34:08,456 p=3107 u=setup n=ansible | changed: [node-2 -> localhost] => (item=dophin-scheduler)
+2026-04-07 03:34:08,458 p=3107 u=setup n=ansible | TASK [Ensure reports root directory exists] *******************************************************************************************************************************************************
+2026-04-07 03:34:08,562 p=3107 u=setup n=ansible | ok: [node-2 -> localhost]
+2026-04-07 03:34:08,564 p=3107 u=setup n=ansible | TASK [Ensure logs directory exists] ***************************************************************************************************************************************************************
+2026-04-07 03:34:08,665 p=3107 u=setup n=ansible | changed: [node-2 -> localhost]
+2026-04-07 03:34:08,666 p=3107 u=setup n=ansible | TASK [Resolve matched group from inventory groups] ************************************************************************************************************************************************
+2026-04-07 03:34:08,686 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:08,708 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:08,711 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:08,715 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:08,717 p=3107 u=setup n=ansible | TASK [Fail if no service mapping found] ***********************************************************************************************************************************************************
+2026-04-07 03:34:08,724 p=3107 u=setup n=ansible | skipping: [node-2]
+2026-04-07 03:34:08,728 p=3107 u=setup n=ansible | skipping: [node-4]
+2026-04-07 03:34:08,735 p=3107 u=setup n=ansible | skipping: [node-1]
+2026-04-07 03:34:08,736 p=3107 u=setup n=ansible | skipping: [node-3]
+2026-04-07 03:34:08,737 p=3107 u=setup n=ansible | TASK [Ensure report subdirectory for group exists] ************************************************************************************************************************************************
+2026-04-07 03:34:08,914 p=3107 u=setup n=ansible | ok: [node-1 -> localhost]
+2026-04-07 03:34:08,987 p=3107 u=setup n=ansible | ok: [node-4 -> localhost]
+2026-04-07 03:34:08,993 p=3107 u=setup n=ansible | ok: [node-2 -> localhost]
+2026-04-07 03:34:09,011 p=3107 u=setup n=ansible | ok: [node-3 -> localhost]
+2026-04-07 03:34:09,012 p=3107 u=setup n=ansible | TASK [Set target service variables] ***************************************************************************************************************************************************************
+2026-04-07 03:34:09,021 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:09,029 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:09,032 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:09,033 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:09,036 p=3107 u=setup n=ansible | TASK [Get last 5 nologin users] *******************************************************************************************************************************************************************
+2026-04-07 03:34:09,355 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:09,576 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:09,615 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:09,622 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:09,623 p=3107 u=setup n=ansible | TASK [Check target service runtime info] **********************************************************************************************************************************************************
+2026-04-07 03:34:10,253 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:10,300 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:10,304 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:10,318 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:10,319 p=3107 u=setup n=ansible | TASK [Set target service failed flag] *************************************************************************************************************************************************************
+2026-04-07 03:34:10,344 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:10,354 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:10,357 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:10,360 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:10,361 p=3107 u=setup n=ansible | TASK [Check chrony] *******************************************************************************************************************************************************************************
+2026-04-07 03:34:10,816 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:10,819 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:10,835 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:10,981 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:10,981 p=3107 u=setup n=ansible | TASK [Set chrony failed flag] *********************************************************************************************************************************************************************
+2026-04-07 03:34:11,005 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:11,013 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:11,015 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:11,021 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:11,022 p=3107 u=setup n=ansible | TASK [Check java processes] ***********************************************************************************************************************************************************************
+2026-04-07 03:34:11,175 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:11,230 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:11,237 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:11,243 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:11,244 p=3107 u=setup n=ansible | TASK [Check ufw] **********************************************************************************************************************************************************************************
+2026-04-07 03:34:11,401 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:11,510 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:11,514 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:11,521 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:11,522 p=3107 u=setup n=ansible | TASK [Check kesl] *********************************************************************************************************************************************************************************
+2026-04-07 03:34:11,907 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:11,963 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:11,970 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:11,978 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:11,979 p=3107 u=setup n=ansible | TASK [Set kesl failed flag] ***********************************************************************************************************************************************************************
+2026-04-07 03:34:11,996 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:12,012 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:12,018 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:12,024 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:12,026 p=3107 u=setup n=ansible | TASK [Check /data] ********************************************************************************************************************************************************************************
+2026-04-07 03:34:12,175 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:12,225 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:12,237 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:12,240 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:12,241 p=3107 u=setup n=ansible | TASK [Set data failed flag] ***********************************************************************************************************************************************************************
+2026-04-07 03:34:12,267 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:12,276 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:12,283 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:12,283 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:12,284 p=3107 u=setup n=ansible | TASK [Build final report] *************************************************************************************************************************************************************************
+2026-04-07 03:34:12,315 p=3107 u=setup n=ansible | ok: [node-2]
+2026-04-07 03:34:12,321 p=3107 u=setup n=ansible | ok: [node-3]
+2026-04-07 03:34:12,327 p=3107 u=setup n=ansible | ok: [node-1]
+2026-04-07 03:34:12,328 p=3107 u=setup n=ansible | ok: [node-4]
+2026-04-07 03:34:12,330 p=3107 u=setup n=ansible | TASK [Save report] ********************************************************************************************************************************************************************************
+2026-04-07 03:34:12,833 p=3107 u=setup n=ansible | changed: [node-4 -> localhost]
+2026-04-07 03:34:12,840 p=3107 u=setup n=ansible | changed: [node-3 -> localhost]
+2026-04-07 03:34:12,841 p=3107 u=setup n=ansible | changed: [node-2 -> localhost]
+2026-04-07 03:34:12,846 p=3107 u=setup n=ansible | changed: [node-1 -> localhost]
+2026-04-07 03:34:12,847 p=3107 u=setup n=ansible | TASK [Show report path] ***************************************************************************************************************************************************************************
+2026-04-07 03:34:12,864 p=3107 u=setup n=ansible | ok: [node-2] => 
+  msg: 'Saved: ./reports/canal/172.16.0.3.log'
+2026-04-07 03:34:12,879 p=3107 u=setup n=ansible | ok: [node-4] => 
+  msg: 'Saved: ./reports/datax/172.16.0.5.log'
+2026-04-07 03:34:12,887 p=3107 u=setup n=ansible | ok: [node-3] => 
+  msg: 'Saved: ./reports/canal/172.16.0.4.log'
+2026-04-07 03:34:12,889 p=3107 u=setup n=ansible | ok: [node-1] => 
+  msg: 'Saved: ./reports/dophin-scheduler/node-1.log'
+2026-04-07 03:34:12,890 p=3107 u=setup n=ansible | TASK [Fail at end if mandatory checks are not compliant] ******************************************************************************************************************************************
+2026-04-07 03:34:12,911 p=3107 u=setup n=ansible | fatal: [node-3]: FAILED! => changed=false 
+  msg: |-
+    Compliance check failed on node-3.
+    target_service_failed=True
+    chrony_failed=False
+    kesl_failed=False
+    data_failed=True
+2026-04-07 03:34:12,927 p=3107 u=setup n=ansible | fatal: [node-1]: FAILED! => changed=false 
+  msg: |-
+    Compliance check failed on node-1.
+    target_service_failed=True
+    chrony_failed=True
+    kesl_failed=True
+    data_failed=True
+2026-04-07 03:34:12,935 p=3107 u=setup n=ansible | fatal: [node-4]: FAILED! => changed=false 
+  msg: |-
+    Compliance check failed on node-4.
+    target_service_failed=True
+    chrony_failed=False
+    kesl_failed=False
+    data_failed=True
+2026-04-07 03:34:12,937 p=3107 u=setup n=ansible | fatal: [node-2]: FAILED! => changed=false 
+  msg: |-
+    Compliance check failed on node-2.
+    target_service_failed=True
+    chrony_failed=False
+    kesl_failed=False
+    data_failed=True
+2026-04-07 03:34:12,937 p=3107 u=setup n=ansible | PLAY RECAP ****************************************************************************************************************************************************************************************
+2026-04-07 03:34:12,937 p=3107 u=setup n=ansible | node-1                     : ok=17   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-04-07 03:34:12,938 p=3107 u=setup n=ansible | node-2                     : ok=21   changed=3    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-04-07 03:34:12,938 p=3107 u=setup n=ansible | node-3                     : ok=17   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-04-07 03:34:12,938 p=3107 u=setup n=ansible | node-4                     : ok=17   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   

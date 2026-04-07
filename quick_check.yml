@@ -5,11 +5,30 @@
   become: true
 
   pre_tasks:
-    - name: Ensure reports directory exists
+    - name: Ensure reports root directory exists
       delegate_to: localhost
       become: false
       file:
-        path: "{{ report_dir }}/{{ matched_group }}"
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0755"
+      run_once: true
+
+    - name: Create report directories for all service groups
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ report_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ service_checks.keys() | list }}"
+      run_once: true
+        
+    - name: Ensure reports root directory exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ report_dir }}"
         state: directory
         mode: "0755"
       run_once: true
@@ -23,7 +42,7 @@
         mode: "0755"
       run_once: true
 
-    - name: Resolve service config from group
+    - name: Resolve matched group from inventory groups
       set_fact:
         matched_group: "{{ (group_names | intersect(service_checks.keys() | list) | first) | default('') }}"
       changed_when: false
@@ -32,6 +51,14 @@
       fail:
         msg: "No service mapping found for host {{ inventory_hostname }}. group_names={{ group_names }}"
       when: matched_group == ""
+
+    - name: Ensure report subdirectory for group exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ report_dir }}/{{ matched_group }}"
+        state: directory
+        mode: "0755"
 
     - name: Set target service variables
       set_fact:
@@ -166,8 +193,6 @@
         if command -v chronyc >/dev/null 2>&1; then
           selected=$(chronyc sources 2>/dev/null | awk '/^\^\*/ {print $2}')
           echo "SELECTED_NTP=${selected:-N/A}"
-          echo "--- TRACKING ---"
-          chronyc tracking 2>/dev/null || true
         else
           echo "SELECTED_NTP=CHRONYC_NOT_FOUND"
         fi
@@ -285,13 +310,13 @@
       delegate_to: localhost
       become: false
       copy:
-        dest: "{{ report_dir }}/{{ matched_group }}/{{ inventory_hostname }}.log"
+        dest: "{{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log"
         content: "{{ report_text }}"
         mode: "0644"
 
     - name: Show report path
       debug:
-        msg: "Saved: {{ report_dir }}/{{ matched_group }}/{{ inventory_hostname }}.log"
+        msg: "Saved: {{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log"
 
     - name: Fail at end if mandatory checks are not compliant
       fail:
