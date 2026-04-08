@@ -3,7 +3,6 @@
   hosts: all
   gather_facts: false
   become: true
-
   pre_tasks:
     - name: Ensure reports root directory exists
       delegate_to: localhost
@@ -13,7 +12,6 @@
         state: directory
         mode: "0755"
       run_once: true
-
     - name: Create report directories for all service groups
       delegate_to: localhost
       become: false
@@ -32,7 +30,6 @@
         state: directory
         mode: "0755"
       run_once: true
-
     - name: Ensure logs directory exists
       delegate_to: localhost
       become: false
@@ -41,17 +38,14 @@
         state: directory
         mode: "0755"
       run_once: true
-
     - name: Resolve matched group from inventory groups
       set_fact:
         matched_group: "{{ (group_names | intersect(service_checks.keys() | list) | first) | default('') }}"
       changed_when: false
-
     - name: Fail if no service mapping found
       fail:
         msg: "No service mapping found for host {{ inventory_hostname }}. group_names={{ group_names }}"
       when: matched_group == ""
-
     - name: Ensure report subdirectory for group exists
       delegate_to: localhost
       become: false
@@ -59,7 +53,6 @@
         path: "{{ report_dir }}/{{ matched_group }}"
         state: directory
         mode: "0755"
-
     - name: Set target service variables
       set_fact:
         check_service_user: "{{ service_checks[matched_group].service_user }}"
@@ -69,7 +62,6 @@
             | default([service_checks[matched_group].service_name])
           }}
       changed_when: false
-
     - name: Check expected service user exists
       shell: |
         if id "{{ check_service_user }}" >/dev/null 2>&1; then
@@ -87,7 +79,6 @@
     - name: Check target service runtime info
       shell: |
         svc="{{ item }}"
-
         if systemctl list-unit-files --type=service | awk '{print $1}' | grep -qx "${svc}.service"; then
           service_unit="${svc}.service"
         elif systemctl list-unit-files --type=service | awk '{print $1}' | grep -qx "${svc}"; then
@@ -98,52 +89,43 @@
           echo "SERVICE=${svc}"
           exit 0
         fi
-
         state=$(systemctl is-active "${service_unit}" 2>/dev/null || true)
         main_pid=$(systemctl show -p MainPID --value "${service_unit}" 2>/dev/null || echo 0)
         description=$(systemctl show -p Description --value "${service_unit}" 2>/dev/null || true)
         exec_start=$(systemctl show -p ExecStart --value "${service_unit}" 2>/dev/null || true)
-
         echo "SERVICE=${service_unit}"
         echo "DESCRIPTION=${description:-N/A}"
         echo "STATE=${state:-unknown}"
         echo "MAIN_PID=${main_pid:-0}"
         echo "EXEC_START=${exec_start:-N/A}"
-
         if [ "$state" != "active" ]; then
           echo "STATUS=FAIL"
           echo "MESSAGE=SERVICE_NOT_ACTIVE"
           exit 0
         fi
-
         if [ -z "$main_pid" ] || [ "$main_pid" = "0" ]; then
           echo "STATUS=FAIL"
           echo "MESSAGE=MAIN_PID_NOT_FOUND"
           exit 0
         fi
-
         run_user=$(ps -o user= -p "$main_pid" 2>/dev/null | xargs || true)
         run_comm=$(ps -o comm= -p "$main_pid" 2>/dev/null | xargs || true)
         run_cmd=$(ps -o args= -p "$main_pid" 2>/dev/null || true)
-
         echo "RUN_USER=${run_user:-unknown}"
         echo "RUN_COMM=${run_comm:-unknown}"
         echo "RUN_CMD=${run_cmd:-N/A}"
-
         if [ "${run_user}" = "{{ check_service_user }}" ]; then
           echo "USER_STATUS=OK"
         else
           echo "USER_STATUS=FAIL"
           echo "EXPECTED_USER={{ check_service_user }}"
         fi
-
         if [ "${run_comm}" = "java" ]; then
           xms=$(printf '%s\n' "$run_cmd" | grep -oE -- '-Xms[^ ]+' | head -n1 || true)
           xmx=$(printf '%s\n' "$run_cmd" | grep -oE -- '-Xmx[^ ]+' | head -n1 || true)
           echo "JAVA_XMS=${xms:-N/A}"
           echo "JAVA_XMX=${xmx:-N/A}"
         fi
-
         if [ "${run_user}" = "{{ check_service_user }}" ]; then
           echo "STATUS=OK"
         else
@@ -156,7 +138,6 @@
       register: target_service_check
       changed_when: false
       failed_when: false
-
     - name: Set target service failed flag
       set_fact:
         target_service_failed: >-
@@ -168,7 +149,6 @@
             | length > 0
           }}
       changed_when: false
-
     - name: Build target service report
       set_fact:
         target_service_report: |
@@ -176,15 +156,12 @@
           ### SERVICE: {{ r.item }} ###
           {{ r.stdout | default('NO_DATA') | trim }}
           {% if not loop.last %}
-
           {% endif %}
           {% endfor %}
       changed_when: false
-
     - name: Set user check failed flag
       set_fact:
         user_failed: "{{ 'STATUS=FAIL' in (user_check.stdout | default('')) }}"
-
     - name: Check chrony
       shell: |
         if systemctl list-unit-files --type=service | grep -q '^chronyd\.service'; then
@@ -196,21 +173,17 @@
           echo "MESSAGE=CHRONY_NOT_FOUND"
           exit 0
         fi
-
         state=$(systemctl is-active "$svc" 2>/dev/null || true)
         echo "SERVICE=$svc"
         echo "STATE=$state"
-
         if [ "$state" != "active" ]; then
           echo "STATUS=FAIL"
           echo "MESSAGE=CHRONY_NOT_ACTIVE"
           exit 0
         fi
-
         if command -v chronyc >/dev/null 2>&1; then
           selected=$(chronyc sources 2>/dev/null | awk '/^\^\*/ {print $2}')
           echo "SELECTED_NTP=${selected:-N/A}"
-
           if [ -z "$selected" ]; then
             echo "WARNING=CHRONY_ACTIVE_BUT_NTP_NOT_SELECTED"
           fi
@@ -218,17 +191,14 @@
           echo "SELECTED_NTP=CHRONYC_NOT_FOUND"
           echo "WARNING=CHRONYC_NOT_FOUND"
         fi
-
         echo "STATUS=OK"
       register: chrony_check
       changed_when: false
       failed_when: false
-
     - name: Set chrony failed flag
       set_fact:
         chrony_failed: "{{ 'STATUS=FAIL' in (chrony_check.stdout | default('')) }}"
       changed_when: false
-
     - name: Set chrony warning flag
       set_fact:
         chrony_warning: >-
@@ -238,14 +208,12 @@
             ('WARNING=CHRONY_ACTIVE_BUT_NTP_NOT_SELECTED' in (chrony_check.stdout | default('')))
           }}
       changed_when: false
-
     - name: Check java processes
       shell: |
         pgrep -a -f '(^|/)(java)( |$)' || echo "NO_JAVA"
       register: java_check
       changed_when: false
       failed_when: false
-
     - name: Check ufw
       shell: |
         if command -v ufw >/dev/null 2>&1; then
@@ -258,7 +226,6 @@
       register: ufw_check
       changed_when: false
       failed_when: false
-
     - name: Check kesl
       shell: |
         if systemctl list-unit-files --type=service | grep -q '^kesl\.service'; then
@@ -282,69 +249,53 @@
       register: kesl_check
       changed_when: false
       failed_when: false
-
     - name: Set kesl failed flag
       set_fact:
         kesl_failed: "{{ 'STATUS=FAIL' in (kesl_check.stdout | default('')) }}"
       changed_when: false
-
     - name: Check /data
       shell: |
         fstab_line=$(grep -w '/data' /etc/fstab 2>/dev/null || true)
         mount_line=$(mount | grep -w '/data' || true)
         df_line=$(df -h | grep -w '/data' || true)
-
         if [ -n "$fstab_line" ] && [ -n "$mount_line" ]; then
           echo "STATUS=OK"
         else
           echo "STATUS=FAIL"
         fi
-
         echo "--- FSTAB ---"
         echo "${fstab_line:-NO_FSTAB_DATA}"
-
         echo "--- MOUNT ---"
         echo "${mount_line:-NO_MOUNT_DATA}"
-
         echo "--- DF ---"
         echo "${df_line:-NO_DF_DATA}"
       register: data_check
       changed_when: false
       failed_when: false
-
     - name: Set data failed flag
       set_fact:
         data_failed: "{{ 'STATUS=FAIL' in (data_check.stdout | default('')) }}"
       changed_when: false
-
     - name: Build final report
       set_fact:
         report_text: |
           HOST: {{ inventory_hostname }}
           MATCHED_GROUP: {{ matched_group }}
-
           === TARGET SERVICE ===
           {{ target_service_report | default('NO_TARGET_SERVICE_DATA') | trim }}
-
           === SERVICE USER CHECK ===
           {{ user_check.stdout | default('NO_USER_CHECK') | trim }}
-
           === JAVA ===
           {{ java_check.stdout | default('NO_JAVA_DATA') | trim }}
-
           === CHRONY ===
           {{ chrony_check.stdout | default('NO_CHRONY_DATA') | trim }}
-
           === UFW ===
           {{ ufw_check.stdout | default('NO_UFW_DATA') | trim }}
-
           === KESL ===
           {{ kesl_check.stdout | default('NO_KESL_DATA') | trim }}
-
           === DATA ===
           {{ data_check.stdout | default('NO_DATA_CHECK') | trim }}
       changed_when: false
-
     - name: Save report
       delegate_to: localhost
       become: false
@@ -352,42 +303,61 @@
         dest: "{{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log"
         content: "{{ report_text }}"
         mode: "0644"
-
     - name: Show report path
       debug:
         msg: "Saved: {{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log"
-
     - name: Show colored summary
       debug:
         msg: |
           HOST: {{ inventory_hostname }}
-
           TARGET SERVICE : {{ 'FAIL' if (target_service_failed | default(false)) else 'OK' }}
           SERVICE USER   : {{ 'FAIL' if (user_failed | default(false)) else 'OK' }}
           CHRONY         : {{ 'FAIL' if (chrony_failed | default(false)) else ('WARNING' if (chrony_warning | default(false)) else 'OK') }}
           KESL           : {{ 'FAIL' if (kesl_failed | default(false)) else 'OK' }}
           DATA           : {{ 'FAIL' if (data_failed | default(false)) else 'OK' }}
-
           REPORT: {{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log
+    
+    - name: Build failed checks list
+      set_fact:
+        failed_checks: >-
+          {{
+            []
+            + (['TARGET SERVICE'] if (target_service_failed | default(false)) else [])
+            + (['SERVICE USER'] if (user_failed | default(false)) else [])
+            + (['CHRONY'] if (chrony_failed | default(false)) else [])
+            + (['KESL'] if (kesl_failed | default(false)) else [])
+            + (['DATA'] if (data_failed | default(false)) else [])
+          }}
     
     - name: Fail at end if mandatory checks are not compliant
       fail:
         msg: |
           Compliance check failed on {{ inventory_hostname }}.
 
-          TARGET SERVICE : {{ 'FAIL' if (target_service_failed | default(false)) else 'OK' }}
-          SERVICE USER   : {{ 'FAIL' if (user_failed | default(false)) else 'OK' }}
-          CHRONY         : {{ 'FAIL' if (chrony_failed | default(false)) else ('WARNING' if (chrony_warning | default(false)) else 'OK') }}
-          KESL           : {{ 'FAIL' if (kesl_failed | default(false)) else 'OK' }}
-          DATA           : {{ 'FAIL' if (data_failed | default(false)) else 'OK' }}
+          FAILED CHECKS:
+          {% for item in failed_checks %}
+          - {{ item }}
+          {% endfor %}
 
+          {% if target_service_failed | default(false) %}
           TARGET SERVICE DETAIL:
           {{ target_service_report | default('NO_TARGET_SERVICE_DATA') | trim }}
+          {% endif %}
+
+          {% if chrony_failed | default(false) %}
+          CHRONY DETAIL:
+          {{ chrony_check.stdout | default('NO_CHRONY_DATA') | trim }}
+          {% endif %}
+
+          {% if kesl_failed | default(false) %}
+          KESL DETAIL:
+          {{ kesl_check.stdout | default('NO_KESL_DATA') | trim }}
+          {% endif %}
+
+          {% if data_failed | default(false) %}
+          DATA DETAIL:
+          {{ data_check.stdout | default('NO_DATA_CHECK') | trim }}
+          {% endif %}
 
           REPORT: {{ report_dir }}/{{ matched_group }}/{{ ansible_host | default(inventory_hostname) }}.log
-      when:
-        - target_service_failed | default(false)
-          or user_failed | default(false)
-          or chrony_failed | default(false)
-          or kesl_failed | default(false)
-          or data_failed | default(false)
+      when: failed_checks | length > 0
